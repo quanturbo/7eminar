@@ -1,11 +1,11 @@
 # Evaluation Report
 
-Mode: direct pipeline with FakeLLMClient.
-Health provider: direct FakeLLMClient.
-Health model: offline-fake.
+Mode: running HTTP API.
+Health provider: OpenAICompatibleLLMClient.
+Health model: openai/gpt-5.4-mini.
 Questions evaluated: 5.
 Passed checks: 5/5.
-Average latency: 7.8 ms.
+Average latency: 1842.4 ms.
 
 ## Per-question results
 
@@ -15,7 +15,7 @@ Question: Я працюю в компанії 3 місяці. Чи можу вж
 Confidence: high
 Fallback reason: None
 Retrieved sections: 1. Щорічна відпустка, 1. Щорічна відпустка, 1. Щорічна відпустка, 1. Щорічна відпустка
-Answer: За наданою базою знань, щорічну оплачувану відпустку можна використати після 6 місяців безперервної роботи у компанії. Тому після 3 місяців таке право в наданому контексті не підтверджене. Джерело: секція 1.
+Answer: Ні, за наведеним правилом щорічну оплачувану відпустку можна використати після 6 місяців безперервної роботи у компанії, тож після 3 місяців — ще ні.
 Checks:
 - response_schema_correct: yes
 - expected_section_found: yes
@@ -29,7 +29,7 @@ Question: Працівник захворів, але ще не надав ме�
 Confidence: high
 Fallback reason: None
 Retrieved sections: 2. Sick leave policy, 2. Sick leave policy, 2. Sick leave policy, 2. Sick leave policy
-Answer: Ні. Лікарняний має бути підтверджений офіційним медичним документом, а за його відсутності відсутність не може автоматично вважатися оплачуваним лікарняним. Джерело: секція 2.
+Answer: Ні, одразу оплатити лікарняний не можна: якщо медичного документа ще немає, відсутність не може бути автоматично оформлена як оплачуваний лікарняний.
 Checks:
 - response_schema_correct: yes
 - expected_section_found: yes
@@ -43,7 +43,7 @@ Question: У нас є payroll-система. Чи можемо ми автом
 Confidence: high
 Fallback reason: None
 Retrieved sections: 3. Індексація зарплати / Salary indexation, 3. Індексація зарплати / Salary indexation, 3. Індексація зарплати / Salary indexation, 3. Індексація зарплати / Salary indexation
-Answer: Ні. Індексацію зарплати не слід застосовувати автоматично однаково для всіх: потрібно перевіряти базовий місяць індексації, який має зберігатися окремо для кожного працівника. Джерело: секція 3.
+Answer: Ні, не слід автоматично індексувати зарплату всім працівникам однаково. Для payroll-системи базовий місяць має зберігатися окремо для кожного працівника, а автоматичне застосування індексації без перевірки поточного базового місяця не допускається. Також для розрахунку потрібні додаткові дані по кожному працівнику.
 Checks:
 - response_schema_correct: yes
 - expected_section_found: yes

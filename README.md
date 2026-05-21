@@ -4,10 +4,29 @@ This repository implements the test task as a controlled hybrid RAG API service.
 
 ## Run Locally
 
-Install the project into the local virtual environment:
+Prerequisite: Python 3.11-3.13.
+
+From a fresh Windows clone, create the local virtual environment and install the project:
 
 ```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
 .\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+```
+
+If the Windows `py` launcher is unavailable, use any Python 3.11-3.13 executable for the first command:
+
+```powershell
+python -m venv .venv
+```
+
+macOS/Linux equivalent:
+
+```bash
+python3.11 -m venv .venv
+. .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
 ```
 
 Start the API:
@@ -86,6 +105,145 @@ Response:
   ],
   "confidence": "high",
   "fallback_reason": null,
+  "trace_id": "generated-uuid",
+  "latency_ms": 20
+}
+```
+
+## Examples for `test_questions.json`
+
+The repository includes five bundled test questions. `trace_id`, `latency_ms`, and exact retrieval scores are generated at runtime, so the values below are representative examples.
+
+### q001
+
+Request:
+
+```json
+{"question": "Я працюю в компанії 3 місяці. Чи можу вже піти у щорічну оплачувану відпустку?"}
+```
+
+Response:
+
+```json
+{
+  "answer": "За наданою базою знань, щорічну оплачувану відпустку можна використати після 6 місяців безперервної роботи у компанії. Тому після 3 місяців таке право в наданому контексті не підтверджене.",
+  "sources": [
+    {
+      "section": "1. Щорічна відпустка",
+      "chunk": "Працівник може використати щорічну оплачувану відпустку після 6 місяців безперервної роботи у компанії.",
+      "score": 1.0
+    }
+  ],
+  "confidence": "high",
+  "fallback_reason": null,
+  "trace_id": "generated-uuid",
+  "latency_ms": 20
+}
+```
+
+### q002
+
+Request:
+
+```json
+{"question": "Працівник захворів, але ще не надав медичний документ. Чи можна одразу оплатити лікарняний?"}
+```
+
+Response:
+
+```json
+{
+  "answer": "Ні. Лікарняний має бути підтверджений офіційним медичним документом, а за його відсутності відсутність не може автоматично вважатися оплачуваним лікарняним.",
+  "sources": [
+    {
+      "section": "2. Sick leave policy",
+      "chunk": "Sick leave must be confirmed by an official medical certificate.",
+      "score": 1.0
+    }
+  ],
+  "confidence": "high",
+  "fallback_reason": null,
+  "trace_id": "generated-uuid",
+  "latency_ms": 20
+}
+```
+
+### q003
+
+Request:
+
+```json
+{"question": "У нас є payroll-система. Чи можемо ми автоматично індексувати зарплату всім працівникам однаково?"}
+```
+
+Response:
+
+```json
+{
+  "answer": "Ні. Індексацію зарплати не слід застосовувати автоматично однаково для всіх: потрібно перевіряти базовий місяць індексації, який має зберігатися окремо для кожного працівника.",
+  "sources": [
+    {
+      "section": "3. Індексація зарплати / Salary indexation",
+      "chunk": "For payroll systems, the base month must be stored separately for each employee.",
+      "score": 1.0
+    }
+  ],
+  "confidence": "high",
+  "fallback_reason": null,
+  "trace_id": "generated-uuid",
+  "latency_ms": 20
+}
+```
+
+### q004
+
+Request:
+
+```json
+{"question": "Яка точна дата сплати ЄСВ у цьому місяці?"}
+```
+
+Response:
+
+```json
+{
+  "answer": "У наданій базі знань недостатньо інформації для точної відповіді. Точна дата відсутня у джерелі, тому я не можу її вигадувати.",
+  "sources": [
+    {
+      "section": "4. Податкові строки",
+      "chunk": "У цій базі знань точні календарні дати сплати ЄСВ не наведені.",
+      "score": 1.0
+    }
+  ],
+  "confidence": "fallback",
+  "fallback_reason": "missing_exact_date",
+  "trace_id": "generated-uuid",
+  "latency_ms": 20
+}
+```
+
+### q005
+
+Request:
+
+```json
+{"question": "Порахуй індексацію для працівника із зарплатою 25000 грн, якщо базовий місяць невідомий."}
+```
+
+Response:
+
+```json
+{
+  "answer": "У наданій базі знань недостатньо інформації для точної відповіді. Для розрахунку бракує необхідних вхідних даних або числових правил.",
+  "sources": [
+    {
+      "section": "3. Індексація зарплати / Salary indexation",
+      "chunk": "Для розрахунку індексації потрібні додаткові дані: базовий місяць працівника, актуальний індекс споживчих цін та сума доходу, яка підлягає індексації.",
+      "score": 1.0
+    }
+  ],
+  "confidence": "fallback",
+  "fallback_reason": "missing_calculation_inputs",
   "trace_id": "generated-uuid",
   "latency_ms": 20
 }
@@ -173,6 +331,8 @@ To prove the running server is using the live OpenAI-compatible adapter rather t
 ```powershell
 .\.venv\Scripts\python.exe scripts\check_endpoint_requests.py --base-url http://127.0.0.1:8000 --require-live --expected-model openai/gpt-4o-mini
 ```
+
+If you changed `OPENAI_MODEL` in `.env`, replace `openai/gpt-4o-mini` in the commands with your configured model id.
 
 Run the broader task audit that checks additional missing-fact, missing-exception, missing-duration, missing-compensation, English-context, response-schema, and trace requirements:
 
