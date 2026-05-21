@@ -11,7 +11,7 @@ From a fresh Windows clone, create the local virtual environment and install the
 ```powershell
 py -3.11 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install --upgrade pip
-.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+.\.venv\Scripts\python.exe -m pip install -e .
 ```
 
 If the Windows `py` launcher is unavailable, use any Python 3.11-3.13 executable for the first command:
@@ -26,7 +26,7 @@ macOS/Linux equivalent:
 python3.11 -m venv .venv
 . .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install -e ".[dev]"
+python -m pip install -e .
 ```
 
 Start the API:
@@ -298,63 +298,9 @@ When `--require-live` is used, the check scripts verify both `/health` and a rea
 
 Every request appends one JSON object to `traces.jsonl` with `trace_id`, question, pipeline stages, retrieved chunks and scores, final response, confidence, fallback reason, latency, and errors. API keys and environment variables are never written to traces.
 
-## Evaluation
+## Evaluation Report
 
-Run deterministic unit/integration tests:
-
-```powershell
-.\.venv\Scripts\python.exe -m pytest -q
-```
-
-Run the provided `test_questions.json` evaluation directly:
-
-```powershell
-.\.venv\Scripts\python.exe scripts\run_eval.py
-```
-
-Or against a running API:
-
-```powershell
-.\.venv\Scripts\python.exe scripts\run_eval.py --base-url http://127.0.0.1:8000
-```
-
-The script writes `evaluation_report.md`.
-
-For a simple `requests`-based endpoint smoke test that reads `test_questions.json`:
-
-```powershell
-.\.venv\Scripts\python.exe scripts\check_endpoint_requests.py --base-url http://127.0.0.1:8000
-```
-
-To prove the running server is using the live OpenAI-compatible adapter rather than the deterministic offline adapter, and that the configured model can generate a grounded in-scope answer:
-
-```powershell
-.\.venv\Scripts\python.exe scripts\check_endpoint_requests.py --base-url http://127.0.0.1:8000 --require-live --expected-model openai/gpt-4o-mini
-```
-
-If you changed `OPENAI_MODEL` in `.env`, replace `openai/gpt-4o-mini` in the commands with your configured model id.
-
-Run the broader task audit that checks additional missing-fact, missing-exception, missing-duration, missing-compensation, English-context, response-schema, and trace requirements:
-
-```powershell
-.\.venv\Scripts\python.exe scripts\check_task_requirements.py --base-url http://127.0.0.1:8000 --require-live --expected-model openai/gpt-4o-mini
-```
-
-If `--require-live` fails with `provider=FakeLLMClient`, stop the server, set `OPENAI_API_KEY` in the same terminal process, and start Uvicorn again. `/health` should then report `OpenAICompatibleLLMClient`.
-
-For final real-provider validation, the expected result is:
-
-```text
-health: status=ok chunks=46 provider=OpenAICompatibleLLMClient
-summary: evaluated=5 passed=5 failed=0
-```
-
-The broader task audit should report:
-
-```text
-health: status=ok chunks=46 provider=OpenAICompatibleLLMClient
-summary: evaluated=11 passed=11 failed=0
-```
+The current run over all questions from `test_questions.json` is recorded in `evaluation_report.md`.
 
 ## Laravel + Python AI Layer Integration
 
