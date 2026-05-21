@@ -1,0 +1,1 @@
+"""Test doubles and deterministic local adapters."""

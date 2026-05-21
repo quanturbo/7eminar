@@ -1,0 +1,16 @@
+.env
+.idea/
+.vscode/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+traces.jsonl
+*.faiss
+*.index
+embedding_cache.json
+dist/
+build/
+*.egg-info/
