@@ -9,12 +9,12 @@ Prerequisite: Python 3.11-3.13.
 From a fresh Windows clone, create the local virtual environment and install the project:
 
 ```powershell
-py -3.11 -m venv .venv
+py -3 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install --upgrade pip
 .\.venv\Scripts\python.exe -m pip install -e .
 ```
 
-If the Windows `py` launcher is unavailable, use any Python 3.11-3.13 executable for the first command:
+If the Windows `py` launcher is unavailable, or if you need to choose a specific installed version, use any Python 3.11-3.13 executable for the first command:
 
 ```powershell
 python -m venv .venv
