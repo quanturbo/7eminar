@@ -15,8 +15,9 @@ COMPENSATION_RE = re.compile(r"компенсац|компенсу|amount|сум
 
 
 class Guardrails:
-    def __init__(self, min_score: float = 0.08) -> None:
+    def __init__(self, min_score: float = 0.08, min_vector_only_score: float = 0.35) -> None:
         self.min_score = min_score
+        self.min_vector_only_score = min_vector_only_score
 
     def evaluate_context(self, question: str, hits: list[RetrievalHit]) -> ContextDecision:
         if not hits or hits[0].score < self.min_score:
@@ -27,12 +28,18 @@ class Guardrails:
                 note="No retrieved chunk exceeded the relevance threshold.",
             )
 
-        if all(hit.bm25_score <= 0 for hit in hits):
+        if (
+            all(hit.bm25_score <= 0 for hit in hits)
+            and hits[0].vector_score < self.min_vector_only_score
+        ):
             return ContextDecision(
                 answerable=False,
                 fallback_reason="no_relevant_context",
                 confidence="fallback",
-                note="No retrieved chunk shared lexical evidence with the question.",
+                note=(
+                    "No retrieved chunk had lexical evidence or a strong multilingual "
+                    "vector match."
+                ),
             )
 
         combined_context = "\n".join(hit.chunk.text.lower() for hit in hits)

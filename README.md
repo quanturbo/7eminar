@@ -32,7 +32,7 @@ python -m pip install -e .
 Start the API:
 
 ```powershell
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+.\.venv\Scripts\python.exe -m uvicorn app.api.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 ## Provider Modes
@@ -66,6 +66,14 @@ Required `.env` values:
 OPENAI_API_KEY=
 OPENAI_BASE_URL=https://openrouter.ai/api/v1
 OPENAI_MODEL=openai/gpt-4o-mini
+EMBEDDING_MODEL_NAME=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+EMBEDDING_BATCH_SIZE=256
+RETRIEVAL_CANDIDATE_POOL_SIZE=64
+RETRIEVAL_BM25_WEIGHT=0.35
+RETRIEVAL_VECTOR_WEIGHT=0.65
+MIN_VECTOR_ONLY_SCORE=0.35
+RETRIEVAL_CACHE_ENABLED=true
+RETRIEVAL_CACHE_DIR=.cache/retrieval
 ```
 
 Then restart Uvicorn. The key and model are read at server startup, so changing `.env` after startup is not enough. If you use a custom OpenRouter model, verify that the model id is valid in OpenRouter before final testing.
@@ -251,7 +259,13 @@ Response:
 
 ## Retrieval Approach
 
-`knowledge_base.md` is the only knowledge source. `app/knowledge/loader.py` splits it by Markdown sections and paragraph chunks, preserving section names and source paths. `app/retrieval/query.py` expands Ukrainian/English HR terms. `app/retrieval/hybrid.py` combines BM25Plus lexical search with a deterministic local hashed vector scorer, then merges rankings with weighted Reciprocal Rank Fusion. Every request goes through the generation step. Only the top retrieved chunks are passed to the model; for `no_relevant_context` fallback, no irrelevant chunks are passed. The whole KB is never sent to the model.
+`knowledge_base.md` is the only knowledge source. `app/knowledge/loader.py` splits it by Markdown sections and paragraph chunks, preserving section names and source paths. `app/retrieval/query.py` now performs only whitespace normalization; it does not add Ukrainian/English synonym terms to the user question.
+
+`app/retrieval/hybrid.py` builds a real hybrid retrieval stack: BM25Okapi for lexical evidence plus FAISS `IndexFlatIP` over normalized FastEmbed multilingual dense vectors. The default embedding model is `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`, configured through `EMBEDDING_MODEL_NAME` rather than hard-coded in the pipeline builder. Retrieval searches a bounded candidate pool from both indexes and fuses normalized BM25/vector scores using configurable weights. This keeps exact-term matching useful while allowing Ukrainian questions to retrieve English source chunks without a query synonym dictionary.
+
+The runtime retrieval knobs are `EMBEDDING_MODEL_NAME`, `EMBEDDING_BATCH_SIZE`, `RETRIEVAL_CANDIDATE_POOL_SIZE`, `RETRIEVAL_BM25_WEIGHT`, `RETRIEVAL_VECTOR_WEIGHT`, `RETRIEVAL_TOP_K`, `MIN_RETRIEVAL_SCORE`, `MIN_VECTOR_ONLY_SCORE`, `RETRIEVAL_CACHE_ENABLED`, and `RETRIEVAL_CACHE_DIR`. `/health` exposes the active embedding model, candidate pool, fusion weights, cache status, and cache key so the running process can be checked instead of trusting docs.
+
+At startup the service computes a stable SHA-256 content hash over the ordered KB chunks and combines it with the embedding model name, embedding dimensions, cache version, and FAISS index type. It then stores or reuses three cache artifacts under `RETRIEVAL_CACHE_DIR`: metadata JSON, normalized embeddings `.npy`, and a FAISS `.faiss` index. If the KB or embedding configuration changes, the cache key changes and the index is rebuilt. If the FAISS file is missing but embeddings are present, the service rebuilds FAISS from cached embeddings without calling the embedding model again. Every request still goes through retrieval and generation; only the top retrieved chunks are passed to the model, and the whole KB is never sent to the model.
 
 ## Project Structure
 
@@ -266,13 +280,7 @@ Production ownership is separated by layer:
 - `app/observability/` owns JSONL trace writing.
 - `app/testing/` contains deterministic test doubles used only when no API key is configured.
 
-The legacy top-level modules such as `app/retriever.py` and `app/pipeline.py` are thin compatibility exports so older imports keep working while the real implementation lives in the layered packages.
-
-The optional `vector` dependency group is reserved for FAISS-backed persistence when the corpus grows:
-
-```powershell
-.\.venv\Scripts\python.exe -m pip install -e ".[dev,vector]"
-```
+The root `app/` package contains only package initialization; implementation modules live in the layered subpackages above. The old top-level compatibility exports were removed so imports point at the owning layer directly.
 
 ## Confidence
 
@@ -309,7 +317,7 @@ Laravel should own authentication, authorization, product API validation, user/s
 ## 1-2 Week Roadmap
 
 - Add Docker Compose and CI for `pytest`, `ruff`, and `mypy`.
-- Persist a FAISS index and embedding cache keyed by KB content hash.
+- Prewarm the retrieval cache during deployment before switching traffic.
 - Add reranking and a larger labeled eval dataset with paraphrases and prompt-injection tests.
 - Add trace rotation, request auth, rate limiting, and production metrics.
 - Add optional LangSmith tracing and dashboard alerts for fallback rate and latency.

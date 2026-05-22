@@ -15,6 +15,8 @@ dependencies = [
     "httpx>=0.27.0",
     "requests>=2.32.0",
     "rank-bm25>=0.2.2",
+    "faiss-cpu>=1.8.0",
+    "fastembed>=0.8.0",
 ]
 
 [project.optional-dependencies]
@@ -24,10 +26,6 @@ dev = [
     "mypy>=1.11.0",
     "types-requests>=2.32.0",
 ]
-vector = [
-    "faiss-cpu>=1.8.0",
-]
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
@@ -46,5 +44,5 @@ warn_unused_configs = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["rank_bm25.*", "langgraph.*", "openai.*"]
+module = ["rank_bm25.*", "langgraph.*", "openai.*", "faiss.*", "fastembed.*"]
 ignore_missing_imports = true

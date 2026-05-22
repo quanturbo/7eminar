@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import Literal
 
 from app.domain.schemas import Chunk
 
@@ -57,7 +58,7 @@ def _split_sections(text: str) -> list[tuple[str, str]]:
     return [(title, "\n".join(lines).strip()) for title, lines in sections if title.strip()]
 
 
-def _language_hint(text: str) -> str:
+def _language_hint(text: str) -> Literal["uk", "en", "mixed"]:
     has_cyrillic = bool(CYRILLIC_RE.search(text))
     has_latin = bool(LATIN_RE.search(text))
     if has_cyrillic and has_latin:
